@@ -1,5 +1,7 @@
 #include <math.h>
 #include <uWS/uWS.h>
+#include <sstream>
+#include <string>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -11,6 +13,15 @@
 
 // for convenience
 using json = nlohmann::json;
+
+// Control the initial state
+bool initial_state_flag = true;
+
+// Store the state vector
+Eigen::VectorXd state(6);
+double steer_value;
+double throttle_value;
+
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -85,12 +96,44 @@ int main() {
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          vector<double> ptsx = j[1]["ptsx"];
-          vector<double> ptsy = j[1]["ptsy"];
+
+          Eigen::VectorXd ptsx(6);
+          ptsx << j[1]["ptsx"];
+          Eigen::VectorXd ptsy(6);
+          ptsy << j[1]["ptsy"];
+          // vector<double> ptsx = j[1]["ptsx"];
+          // vector<double> ptsy = j[1]["ptsy"];
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          // double mpc_x_in = j[1]["mpc_x"];
+          // double mpc_y_in = j[1]["mpc_y"];
+          // double next_x_vals = j[1]["next_x"];
+          // double mpc_y_vals = j[1]["next_y"];
+
+          auto coeffs = polyfit(ptsx, ptsy, 3);
+          /************* Derive fitting coeffs ***********/
+          std::cout << "==========================" << std::endl;
+          std::cout << coeffs << std::endl;
+          std::cout << "==========================" << std::endl;
+          /***********************************************/
+
+          /************** Compute cte and epsi parameters ****************/
+          double cte = polyeval(coeffs, px) - py;
+          //double epsi = psi - atan(coeffs[1]);
+          double epsi = psi - atan(coeffs[1] + 2*coeffs[2]*px + 3*coeffs[3]*pow(px,2));
+
+          if (initial_state_flag)
+          {
+          	//state << px, py, psi, v, cte, epsi;
+          	initial_state_flag = false;
+          }else{
+          	//state[6] = cte;
+          	//estate[7] = epsi;
+          }
+
+          state << px, py, psi, v, cte, epsi;
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -98,8 +141,59 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+
+
+          // std::vector<double> x_vals = {state[0]};
+          // std::vector<double> y_vals = {state[1]};
+          // std::vector<double> psi_vals = {state[2]};
+          // std::vector<double> v_vals = {state[3]};
+          // std::vector<double> cte_vals = {state[4]};
+          // std::vector<double> epsi_vals = {state[5]};
+          // std::vector<double> delta_vals = {};
+          // std::vector<double> a_vals = {};
+
+          auto vars = mpc.Solve(state, coeffs);
+
+          /************* Derive fitting coeffs ***********/
+          std::cout << "-----------------------------" << std::endl;
+          std::cout << "x = " << vars[0] << std::endl;
+          std::cout << "y = " << vars[1] << std::endl;
+          std::cout << "psi = " << vars[2] << std::endl;
+          std::cout << "v = " << vars[3] << std::endl;
+          std::cout << "cte = " << vars[4] << std::endl;
+          std::cout << "epsi = " << vars[5] << std::endl;
+          std::cout << "delta = " << vars[6] << std::endl;
+          std::cout << "a = " << vars[7] << std::endl;
+          std::cout << "-----------------------------" << std::endl;
+          /***********************************************/
+
+          // x_vals.push_back(vars[0]);
+          // y_vals.push_back(vars[1]);
+          // psi_vals.push_back(vars[2]);
+          // v_vals.push_back(vars[3]);
+          // cte_vals.push_back(vars[4]);
+          // epsi_vals.push_back(vars[5]);
+
+          // delta_vals.push_back(vars[6]);
+          // a_vals.push_back(vars[7]);
+
+          steer_value = vars[6];
+          throttle_value = vars[7];
+
+
+          std::cout << vars[0] << std::endl;
+          std::cout << vars[1] << std::endl;
+          std::cout << vars[2] << std::endl;
+          std::cout << vars[3] << std::endl;
+          std::cout << vars[4] << std::endl;
+          std::cout << vars[6] << std::endl;
+          std::cout << vars[7] << std::endl;
+
+
+          //state << vars[0], vars[1], vars[2], vars[3], vars[4], vars[5];
+
+
+
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -110,6 +204,8 @@ int main() {
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
+          mpc_x_vals.push_back(vars[0]);
+          mpc_y_vals.push_back(vars[1]);          
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -120,6 +216,8 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+          // next_x_vals.push_back(ptsx);
+          // next_y_vals.push_back(ptsy);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
@@ -183,3 +281,4 @@ int main() {
   }
   h.run();
 }
+
