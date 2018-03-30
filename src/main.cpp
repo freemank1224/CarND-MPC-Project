@@ -76,6 +76,25 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+/********** Define cordinates tranformation ************/
+Eigen::MatrixXd tranformGlobal2Local(double x, double y, double psi, const vector<double> & ptsx, const vector<double> & ptsy)
+{
+	unsigned len = ptsx.size();
+
+	auto waypoints = Eigen::MatrixXd(2,len);
+
+	for (int i = 0; i < len; ++i)
+	{
+		waypoints(0,i) = cos(psi) * (ptsx[i] - x) + sin(psi) * (ptsy[i] - y);
+		waypoints(1,i) = -sin(psi) * (ptsx[i] - x) + cos(psi) * (ptsy[i] - y);
+
+	}
+
+	return waypoints;
+
+}
+
+
 int main() {
   uWS::Hub h;
 
@@ -96,23 +115,24 @@ int main() {
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
-
-          Eigen::VectorXd ptsx(6);
-          ptsx << j[1]["ptsx"];
-          Eigen::VectorXd ptsy(6);
-          ptsy << j[1]["ptsy"];
-          // vector<double> ptsx = j[1]["ptsx"];
-          // vector<double> ptsy = j[1]["ptsy"];
+          // Eigen::VectorXd ptsx(6);
+          // ptsx << j[1]["ptsx"];
+          // Eigen::VectorXd ptsy(6);
+          // ptsy << j[1]["ptsy"];
+          vector<double> ptsx = j[1]["ptsx"];
+          vector<double> ptsy = j[1]["ptsy"];
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-          // double mpc_x_in = j[1]["mpc_x"];
-          // double mpc_y_in = j[1]["mpc_y"];
-          // double next_x_vals = j[1]["next_x"];
-          // double mpc_y_vals = j[1]["next_y"];
 
-          auto coeffs = polyfit(ptsx, ptsy, 3);
+          /************ Cordinates Transform ***************/
+          Eigen::MatrixXd waypoints = tranformGlobal2Local(px,py,psi,ptsx,ptsy);
+          Eigen::VectorXd local_ptsx = waypoints.row(0);
+          Eigen::VectorXd local_ptsy = waypoints.row(1);
+
+          /*********** Fitting waypoints ***************/
+          auto coeffs = polyfit(local_ptsx, local_ptsy, 3);
           /************* Derive fitting coeffs ***********/
           std::cout << "==========================" << std::endl;
           std::cout << coeffs << std::endl;
@@ -120,20 +140,14 @@ int main() {
           /***********************************************/
 
           /************** Compute cte and epsi parameters ****************/
-          double cte = polyeval(coeffs, px) - py;
+          /******************** IN vehicle cordinate *********************/
+          /*********************** x = y = psi = 0 ***********************/
+          double cte = polyeval(coeffs, 0);
           //double epsi = psi - atan(coeffs[1]);
-          double epsi = psi - atan(coeffs[1] + 2*coeffs[2]*px + 3*coeffs[3]*pow(px,2));
+          double epsi = - atan(coeffs[1]);
 
-          if (initial_state_flag)
-          {
-          	//state << px, py, psi, v, cte, epsi;
-          	initial_state_flag = false;
-          }else{
-          	//state[6] = cte;
-          	//estate[7] = epsi;
-          }
 
-          state << px, py, psi, v, cte, epsi;
+          state << 0,0,0, v, cte, epsi;
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -141,16 +155,6 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-
-
-          // std::vector<double> x_vals = {state[0]};
-          // std::vector<double> y_vals = {state[1]};
-          // std::vector<double> psi_vals = {state[2]};
-          // std::vector<double> v_vals = {state[3]};
-          // std::vector<double> cte_vals = {state[4]};
-          // std::vector<double> epsi_vals = {state[5]};
-          // std::vector<double> delta_vals = {};
-          // std::vector<double> a_vals = {};
 
           auto vars = mpc.Solve(state, coeffs);
 
@@ -167,15 +171,6 @@ int main() {
           std::cout << "-----------------------------" << std::endl;
           /***********************************************/
 
-          // x_vals.push_back(vars[0]);
-          // y_vals.push_back(vars[1]);
-          // psi_vals.push_back(vars[2]);
-          // v_vals.push_back(vars[3]);
-          // cte_vals.push_back(vars[4]);
-          // epsi_vals.push_back(vars[5]);
-
-          // delta_vals.push_back(vars[6]);
-          // a_vals.push_back(vars[7]);
 
           steer_value = vars[6];
           throttle_value = vars[7];
@@ -198,15 +193,13 @@ int main() {
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
-          mpc_x_vals.push_back(vars[0]);
-          mpc_y_vals.push_back(vars[1]);          
-
+         
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
@@ -218,7 +211,11 @@ int main() {
           vector<double> next_y_vals;
           // next_x_vals.push_back(ptsx);
           // next_y_vals.push_back(ptsy);
-
+		  for (int i = 0; i < ptsx.size(); ++i)
+		  {
+		  	next_x_vals.push_back(local_ptsx(i));
+		  	next_y_vals.push_back(local_ptsy(i));
+		  } 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
