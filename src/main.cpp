@@ -79,7 +79,7 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 /********** Define cordinates tranformation ************/
 Eigen::MatrixXd tranformGlobal2Local(double x, double y, double psi, const vector<double> & ptsx, const vector<double> & ptsy)
 {
-	unsigned len = ptsx.size();
+	unsigned int len = ptsx.size();
 
 	auto waypoints = Eigen::MatrixXd(2,len);
 
@@ -136,9 +136,9 @@ int main() {
           /*********** Fitting waypoints ***************/
           auto coeffs = polyfit(local_ptsx, local_ptsy, 3);
           /************* Derive fitting coeffs ***********/
-          std::cout << "==========================" << std::endl;
-          std::cout << coeffs << std::endl;
-          std::cout << "==========================" << std::endl;
+          // std::cout << "==========================" << std::endl;
+          // std::cout << coeffs << std::endl;
+          // std::cout << "==========================" << std::endl;
           /***********************************************/
 
           /************** Compute cte and epsi parameters ****************/
@@ -149,6 +149,18 @@ int main() {
           double epsi = - atan(coeffs[1]);
 
           state << 0,0,0, v, cte, epsi;
+          /************* Before latency ***********/
+          std::cout << "----------BEFORE-----------" << std::endl;
+          std::cout << "x = " << state[0] << std::endl;
+          std::cout << "y = " << state[1] << std::endl;
+          std::cout << "psi = " << state[2] << std::endl;
+          std::cout << "v = " << state[3] << std::endl;
+          std::cout << "cte = " << state[4] << std::endl;
+          std::cout << "epsi = " << state[5] << std::endl;
+          // std::cout << "delta = " << vars[6] << std::endl;
+          // std::cout << "a = " << vars[7] << std::endl;
+          std::cout << "-----------------------------" << std::endl;
+          /***********************************************/
 
           /************** Handle Latency ******************/
 
@@ -156,6 +168,18 @@ int main() {
 
           /************************************************/
 
+          /************* After latency ***********/
+          std::cout << "---------AFTER---------" << std::endl;
+          std::cout << "x = " << state[0] << std::endl;
+          std::cout << "y = " << state[1] << std::endl;
+          std::cout << "psi = " << state[2] << std::endl;
+          std::cout << "v = " << state[3] << std::endl;
+          std::cout << "cte = " << state[4] << std::endl;
+          std::cout << "epsi = " << state[5] << std::endl;
+          // std::cout << "delta = " << vars[6] << std::endl;
+          // std::cout << "a = " << vars[7] << std::endl;
+          std::cout << "-----------------------------" << std::endl;
+          /***********************************************/
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -167,16 +191,16 @@ int main() {
           auto vars = mpc.Solve(state, coeffs);
 
           /************* Derive fitting coeffs ***********/
-          std::cout << "-----------------------------" << std::endl;
-          std::cout << "x = " << vars[0] << std::endl;
-          std::cout << "y = " << vars[1] << std::endl;
-          std::cout << "psi = " << vars[2] << std::endl;
-          std::cout << "v = " << vars[3] << std::endl;
-          std::cout << "cte = " << vars[4] << std::endl;
-          std::cout << "epsi = " << vars[5] << std::endl;
-          std::cout << "delta = " << vars[6] << std::endl;
-          std::cout << "a = " << vars[7] << std::endl;
-          std::cout << "-----------------------------" << std::endl;
+          // std::cout << "-----------------------------" << std::endl;
+          // std::cout << "x = " << vars[0] << std::endl;
+          // std::cout << "y = " << vars[1] << std::endl;
+          // std::cout << "psi = " << vars[2] << std::endl;
+          // std::cout << "v = " << vars[3] << std::endl;
+          // std::cout << "cte = " << vars[4] << std::endl;
+          // std::cout << "epsi = " << vars[5] << std::endl;
+          // std::cout << "delta = " << vars[6] << std::endl;
+          // std::cout << "a = " << vars[7] << std::endl;
+          // std::cout << "-----------------------------" << std::endl;
           /***********************************************/
 
 

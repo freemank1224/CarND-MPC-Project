@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 10;
-double dt = 0.1;
+size_t N = 12;
+double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -52,19 +52,19 @@ class FG_eval {
 
   	for (int t = 0; t < N; t++)
   	{
-  		fg[0] += CppAD::pow(vars[cte_start + t],2);
-  		fg[0] += 10 * CppAD::pow(vars[epsi_start + t],2);
-  		fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+  		fg[0] += 2 * CppAD::pow(vars[cte_start + t],2);
+  		fg[0] += 150 * CppAD::pow(vars[epsi_start + t],2);
+  		fg[0] += 10 * CppAD::pow(vars[v_start + t] - ref_v, 2);
   	}
 
     for (int t = 0; t < N - 1; t++) {
-      fg[0] += 10000 * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 9000 * CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
 
     for (int t = 1; t < N - 2; t++) {
       fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += 1000 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 10 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     /*************** Setup Constraints *************/
