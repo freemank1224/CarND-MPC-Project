@@ -7,7 +7,7 @@ using CppAD::AD;
 
 // TODO: Set the timestep length and duration
 size_t N = 10;
-double dt = 0.05;
+double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -22,7 +22,7 @@ double dt = 0.05;
 const double Lf = 2.67;
 
 /************ Set reference speed **********/
-double ref_v = 60;
+double ref_v = 50;
 
 // Vars index milestone: x,y,psi,v,cte,epsi,delta,a
 size_t x_start = 0;
@@ -53,18 +53,18 @@ class FG_eval {
   	for (int t = 0; t < N; t++)
   	{
   		fg[0] += CppAD::pow(vars[cte_start + t],2);
-  		fg[0] += 400 * CppAD::pow(vars[epsi_start + t],2);
+  		fg[0] += 10 * CppAD::pow(vars[epsi_start + t],2);
   		fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
   	}
 
     for (int t = 0; t < N - 1; t++) {
-      fg[0] += 6000 * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 10000 * CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
 
     for (int t = 1; t < N - 2; t++) {
       fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 1000 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     /*************** Setup Constraints *************/
@@ -263,4 +263,33 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   		  solution.x[psi_start + 1], solution.x[v_start + 1], 
   		  solution.x[cte_start + 1], solution.x[epsi_start + 1], 
   		  solution.x[delta_start], solution.x[a_start]};
+}
+
+Eigen::VectorXd MPC::UpdateLatency(Eigen::VectorXd state, double delta, double acc, double latencyTime){
+
+  double px = state[0];
+  double py = state[1];
+  double psi = state[2];
+  double v = state[3];
+  double cte = state[4];
+  double epsi = state[5];
+
+  Eigen::VectorXd newState(6);
+
+  v *= 0.44704;
+  // delta *= 0.436332;
+
+  // psi = delta; // in coordinate now, so use steering angle to predict x and y
+  px = px + v*cos(psi)*latencyTime; 
+  py = py + v*sin(psi)*latencyTime;
+  cte= cte + v*sin(epsi)*latencyTime;
+  epsi = epsi + v*delta*latencyTime/Lf;
+  psi = psi + v*delta*latencyTime/Lf;
+  v = v + acc*latencyTime;
+
+  v /= 0.44704;
+  newState << px, py, psi, v, cte, epsi;
+
+  return newState;
+
 }

@@ -125,6 +125,8 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          double delta = j[1]["steering_angle"];
+          double a = j[1]["throttle"];
 
           /************ Cordinates Transform ***************/
           Eigen::MatrixXd waypoints = tranformGlobal2Local(px,py,psi,ptsx,ptsy);
@@ -146,8 +148,14 @@ int main() {
           //double epsi = psi - atan(coeffs[1]);
           double epsi = - atan(coeffs[1]);
 
-
           state << 0,0,0, v, cte, epsi;
+
+          /************** Handle Latency ******************/
+
+          state = mpc.UpdateLatency(state, delta, a, 0.1);
+
+          /************************************************/
+
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.

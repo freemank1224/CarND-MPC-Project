@@ -15,6 +15,7 @@ class MPC {
   // Solve the model given an initial state and polynomial coefficients.
   // Return the first actuatotions.
   vector<double> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
+  Eigen::VectorXd UpdateLatency(Eigen::VectorXd state, double delta, double acc, double latencyTime);
 };
 
 #endif /* MPC_H */
