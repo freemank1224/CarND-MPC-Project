@@ -27,8 +27,16 @@ Cordination transformation has been performed for display the reference lines in
 
 
 ## Model Predictive Control with Latency
-In my solution, I implemented an MPC algorithm without special consideration of the latency. According to my test result, the vehicle has run perfectly for half an hour under 60mph without any error. Because the parameters was just work well for the given speed and latency.
+In my solution, I implemented an latency processing function in MPC.cpp as a method of the MPC class. I used vehicle's kinematic model to compute the state transition during the latency time, 100ms. This part of code was listed below.
 
-
-
+```C++
+  px = px + v*cos(psi)*latencyTime; 
+  py = py + v*sin(psi)*latencyTime;
+  cte= cte + v*sin(epsi)*latencyTime;
+  epsi = epsi + v*delta*latencyTime/Lf;
+  psi = psi + v*delta*latencyTime/Lf;
+  v = v + acc*latencyTime;
+```
+In above code, the "latencyTime" was equal to 100ms.
+All of the operations were performed under the vhicle coordinate. Then the updated state variables was sent to the optimizer as current state, which compensated the system latency.
 
